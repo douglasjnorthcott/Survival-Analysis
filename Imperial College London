@@ -1,0 +1,171 @@
+---
+title: 'Survival Analysis '
+author: "Doug Northcott"
+date: "July 16, 2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+Loading the course Data Set
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+g <- read_csv(file = "C:/Users/dougl/Downloads/simulated HF mort data for GMPH (1K) final.csv")
+```
+
+```{r}
+library('survival')
+library(ggplot2) 
+```
+
+
+```{r imperial}
+getwd()
+```
+
+
+
+```{r, echo=FALSE}
+dim(g)
+
+g[1:5,]
+```
+Running a Log-Rank Test
+
+Ethnic Group
+
+```{r}
+gender <- as.factor(g[,"gender"]) 
+fu_time <- g[,"fu_time"]
+death <- g[,"death"]
+cox <- coxph(Surv(fu_time, death) ~ ethnicgroup, data= g)
+summary(cox)
+```
+KM Plot:
+```{r}
+km_fit <- survfit(Surv(fu_time, death) ~ 1, data =g)
+plot(km_fit)
+```
+
+```{r}
+summary(km_fit, times = c(1:7,30,60,90*(1:10))) 
+```
+KM Plot for Gender: 
+```{r}
+km_gender_fit <- survfit(Surv(fu_time, death) ~ gender, data = g) 
+
+plot(km_gender_fit)
+```
+
+
+```{r}
+survdiff(Surv(fu_time, death) ~ gender, rho=0,data=g) 
+```
+Separating Age in 65+
+```{r}
+age <- g[,"age"]
+age_65plus <- ifelse(g[,"age"]>=65,1,0)
+table(age_65plus, exclude = NULL)
+```
+Simple Cox Model for  Survival Analysis of Age
+
+```{r}
+cox <- coxph(Surv(fu_time, death)~ age, data = g)
+
+summary(cox)
+```
+As you can see Age has a significant effect on hazard
+
+```{r}
+library("survminer")
+```
+
+```{r}
+ethnicgroup <- factor(g[,"ethnicgroup"]) # can also use “as.factor” rather than “factor”
+fu_time <- g[,"fu_time"]
+death <- g[,"death"]
+
+cox <- coxph(Surv(fu_time, death) ~ ethnicgroup, data = g)
+summary(cox)
+```
+
+```{r}
+levels(ethnicgroup)<- c(levels(ethnicgroup), "8")
+ethnicgroup[is.na(ethnicgroup)] <- "8"
+cox <- coxph(Surv(fu_time, death) ~ ethnicgroup, data = g)
+summary(cox)
+```
+
+```{r}
+summary(age)
+table(gender)
+table(g$prior_dnas)
+table(ethnicgroup)
+table(g$copd)
+copd <- g$copd
+prior_dnas <- g$prior_dnas
+quintile <- as.factor(g$quintile)
+
+```
+
+```{r}
+
+cox <- coxph(Surv(fu_time, death) ~ age + gender + copd + quintile + ethnicgroup, data=g)
+
+summary(cox)
+```
+
+```{r}
+table(quintile, exclude = NULL)
+```
+
+```{r}
+fit <- coxph(Surv(fu_time, death) ~ gender, data= g) 
+
+temp <- cox.zph(fit)
+
+print(temp) 
+
+plot(temp) 
+```
+```{r}
+fit <- coxph(Surv(fu_time, death) ~ gender, data = g)  
+temp <- cox.zph(fit)  
+print(temp)  
+plot(temp) 
+```
+```{r}
+km_fit <- survfit(Surv(fu_time, death) ~ gender, data = g) 
+
+plot(km_fit, xlab = "time", ylab = "Survival probability")
+```
+```{r}
+
+res.cox <- coxph(Surv(fu_time, death) ~ age, data = g) 
+ggcoxdiagnostics(res.cox, type = "dfbeta", 
+                 linear.predictions = FALSE, ggtheme = theme_bw()) 
+```
+
+```{r}
+res.cox <- coxph(Surv(fu_time, death) ~ age, data=g) 
+ggcoxdiagnostics(res.cox, type = "deviance", 
+                 linear.predictions = FALSE, ggtheme = theme_bw()) 
+```
+```{r}
+ggcoxfunctional(Surv(fu_time, death) ~ age + log(age) + sqrt(age), data =g) 
+```
+
+```{r}
+fit <- coxph(Surv(fu_time, death) ~ copd, data= g)  
+temp <- cox.zph(fit)  
+print(temp)  
+plot(temp)
+
+```
+```{r}
+km_fit <-survfit(Surv(fu_time, death) ~ 1, data= g)
+
+plot(km_fit)
+
+```
+
